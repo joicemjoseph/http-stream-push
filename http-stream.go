@@ -1,11 +1,10 @@
-package httpstream
+package main
 
 import (
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 )
 
 const (
@@ -57,18 +56,12 @@ func main() {
 	if err := cfg.init(); err != nil {
 		panic(err)
 	}
-
 	data, err := cfg.read(cfg.initData.inURL)
 	if err != nil {
 		// do stuff
 		panic(err)
 	}
 	fmt.Printf(string(data))
-}
-func (f *flagData) getStringFlags(flg *flag.FlagSet) (*string, error) {
-	d := flg.String(f.name, f.value.(string), f.usage)
-	flg.Parse([]string{f.name})
-	return d, nil
 }
 
 func (c *Config) setTopicID(topic *string) {
@@ -84,37 +77,11 @@ func (c *Config) init() error {
 	return c.initData.init()
 }
 func (id *initialData) init() error {
-	var topic, streamServerURL, kafkaRestServerURL *string
-	if *streamServerURL = os.Getenv("in"); *streamServerURL == "" {
-		// parse input stream flag
-		fg := flag.NewFlagSet("in", flag.PanicOnError)
-		f := &flagData{"in", "http://kredaro.ga:8080", "URL of the incoming stream"}
-		streamServerURL, err := f.getStringFlags(fg)
-		if err != nil {
-			*streamServerURL = inURL
-		}
-	}
-	if *kafkaRestServerURL = os.Getenv("out"); *kafkaRestServerURL == "" {
-		// parse kafka stream server flag
-		fg := flag.NewFlagSet("out", flag.PanicOnError)
-		f := &flagData{"out", "http://kredaro.ga:8080", "URL of the outgoing stream"}
-		kafkaRestServerURL, err := f.getStringFlags(fg)
-		if err != nil {
-			*kafkaRestServerURL = outURL + ":" + kafkaRestServerPort
-		}
-	}
-	if *topic = os.Getenv("topic"); *topic == "" {
-		// parse topic flag
-		fg := flag.NewFlagSet("topic", flag.PanicOnError)
-		f := &flagData{"topic", "", "name of the topic to upload the stream"}
-		topic, err := f.getStringFlags(fg)
-		if err != nil {
-			// topic cannot be null
-			log.Output(0, "Error: "+err.Error())
-			log.Output(0, "Topic: "+*topic)
-			return err
-		}
-	}
+	streamServerURL := flag.String("in", "", "URL of the incoming stream")
+	kafkaRestServerURL := flag.String("out", "http://localhost", "URL of the outgoing stream")
+	topic := flag.String("topic", "topic", "name of the topic to upload the stream")
+	flag.Parse()
+
 	id.inURL = streamServerURL
 	id.outURL = kafkaRestServerURL
 	id.topicName = topic

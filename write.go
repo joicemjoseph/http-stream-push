@@ -1,5 +1,5 @@
-package httpstream
+package main
 
-func (c *Config) ps(url string) error {
+func (c *Config) push(url string) error {
 	return nil
 }
