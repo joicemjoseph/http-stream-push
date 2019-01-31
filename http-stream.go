@@ -24,8 +24,7 @@ var client *http.Client
 
 // Config is struct for reading data from given url.
 type Config struct {
-	initData initialData
-	topic    *int
+	topic *int
 }
 type flagData struct {
 	name  string
@@ -53,28 +52,37 @@ func init() {
 }
 func main() {
 	cfg := Config{}
+	id := initialData{}
+	// var dr = make(chan []byte, 10)
 	if err := cfg.init(); err != nil {
 		panic(err)
 	}
-	data, err := cfg.read(cfg.initData.inURL)
+	if err := id.init(); err != nil {
+		panic(err)
+	}
+	cfg.topic, _ = id.getTopicID()
+	data, err := cfg.read(id.inURL)
 	if err != nil {
 		// do stuff
 		panic(err)
 	}
+	// dr <- data
 	fmt.Printf(string(data))
 }
 
-func (c *Config) setTopicID(topic *string) {
-	t, _, err := getTopicsAndIDFromServer(topic, c.initData.schemaServerURL)
+func (id *initialData) getTopicID() (*int, error) {
+	t, _, err := getTopicsAndIDFromServer(id.topicName, id.schemaServerURL)
 	if err != nil {
-		log.Output(0, err.Error())
+		log.Output(0, "Error:"+err.Error())
 		panic(err)
 	}
-	c.topic = t
+
+	return t, nil
 }
 
 func (c *Config) init() error {
-	return c.initData.init()
+
+	return nil
 }
 func (id *initialData) init() error {
 	streamServerURL := flag.String("in", "", "URL of the incoming stream")
