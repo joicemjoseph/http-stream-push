@@ -8,6 +8,9 @@ import (
 )
 
 const (
+	jsonContentType = "application/json"
+)
+const (
 	inURL                 = "http://localhost"
 	outURL                = "http://35.229.100.101"
 	kafkaRestServerPort   = "8082"
