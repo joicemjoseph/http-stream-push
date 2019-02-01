@@ -5,10 +5,12 @@ import "net/http"
 const (
 	kafkaDefaultServerURL = "http://localhost"
 	kafkaDefaultTopic     = "test"
+	kafkaDefaultOffset    = 0
 )
 const (
 	kafkaServerENV = "KAFKASERVERURL"
-	kafkatopicENV  = "KAFKATOPIC"
+	kafkaTopicENV  = "KAFKATOPIC"
+	kafkaOffsetENV = "KAFKAOFFSET"
 )
 
 var client *http.Client
@@ -27,7 +29,7 @@ type broaker struct {
 type HandleData interface {
 
 	// read stream data
-	Read()
+	Read(*int64)
 	// push data to
 	Push() error
 }
