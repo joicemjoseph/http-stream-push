@@ -5,13 +5,22 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/joicemjoseph/http-stream-push/kafka"
+	reader "github.com/joicemjoseph/http-stream-push/kafkareader"
+	writer "github.com/joicemjoseph/http-stream-push/kafkawriter"
 )
 
 func init() {
 
 }
 func main() {
+	kafkaServerURL, kafkaTopic, kafkaOffset := parse()
+	cfg := broaker{reader: reader.Create(kafkaTopic, kafkaServerURL),
+		writer: writer.Create(kafkaTopic, kafkaServerURL)}
+	mp := cfg.reader.Read(kafkaOffset)
+	cfg.writer.Push(mp)
+}
+
+func parse() (*string, *string, *int64) {
 	// parse flags
 	kafkaServerURL := flag.String("url", "", "URL of the kafka server")
 	kafkaTopic := flag.String("topic", "", "name of the topic to upload the stream")
@@ -41,8 +50,5 @@ func main() {
 			*kafkaOffset = kafkaDefaultOffset
 		}
 	}
-
-	cfg := broaker{handler: kafka.Create(kafkaTopic, kafkaServerURL)}
-
-	cfg.handler.Read(kafkaOffset)
+	return kafkaServerURL, kafkaTopic, kafkaOffset
 }

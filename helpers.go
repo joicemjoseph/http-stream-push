@@ -22,14 +22,21 @@ type flagData struct {
 	usage string
 }
 type broaker struct {
-	handler HandleData
+	reader ReadData
+	writer WriteData
 }
 
-// HandleData is
-type HandleData interface {
+// ReadData is to read data.
+// It can be either file, db or kafka
+type ReadData interface {
 
 	// read stream data
-	Read(*int64)
+	Read(*int64) *[]byte
+}
+
+// WriteData to write data.
+// It can be file, DB or kafka
+type WriteData interface {
 	// push data to
-	Push() error
+	Push(*[]byte) error
 }
