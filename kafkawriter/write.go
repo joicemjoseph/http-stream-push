@@ -3,7 +3,6 @@ package kafkawriter
 import (
 	"context"
 	"log"
-	"time"
 
 	kafka "github.com/segmentio/kafka-go"
 )
@@ -17,21 +16,21 @@ func (c *Config) Push(mp *[]byte) error {
 
 func write(c *Config, mp *[]byte) {
 	// log.Output(0, "Incoming data :"+string(*mp))
-	dialer := &kafka.Dialer{
-		Timeout:   10 * time.Second,
-		DualStack: true,
-	}
+	// dialer := &kafka.Dialer{
+	// 	Timeout:   10 * time.Second,
+	// 	DualStack: true,
+	// }
+	w := kafka.NewWriter(kafka.WriterConfig{
+		Brokers:  []string{"159.65.4.143:9092"},
+		Topic:    "sample",
+		Balancer: &kafka.Hash{},
+	})
 	// w := kafka.NewWriter(kafka.WriterConfig{
 	// 	Brokers:  []string{"35.229.100.101:9092"},
 	// 	Topic:    "sample",
-	// 	Balancer: &kafka.LeastBytes{},
+	// 	Balancer: &kafka.Hash{},
+	// 	Dialer:   dialer,
 	// })
-	w := kafka.NewWriter(kafka.WriterConfig{
-		Brokers:  []string{"35.229.100.101:9092"},
-		Topic:    "sample",
-		Balancer: &kafka.Hash{},
-		Dialer:   dialer,
-	})
 
 	err := w.WriteMessages(context.Background(),
 		kafka.Message{

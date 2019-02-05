@@ -27,7 +27,7 @@ func reader(c *Config, offset *int64) *[]byte {
 		return nil
 	}
 	// data, _ := json.Marshal(m)
-	log.Printf("message at topic/partition/offset %v/%v/%v: %s = %s\n", m.Topic, m.Partition, m.Offset, string(m.Key), string(m.Value))
+	log.Printf("%v\n\n", string(m.Value))
 	r.Close()
 	return &m.Value
 }

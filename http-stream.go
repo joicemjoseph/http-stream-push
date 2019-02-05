@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"log"
 	"os"
 	"strconv"
 
@@ -16,8 +17,24 @@ func main() {
 	kafkaServerURL, kafkaTopic, kafkaOffset := parse()
 	cfg := broaker{reader: reader.Create(kafkaTopic, kafkaServerURL),
 		writer: writer.Create(kafkaTopic, kafkaServerURL)}
+	structData, err := getStruct(*kafkaTopic)
+	if err != nil {
+		log.Output(0, err.Error())
+		panic(err)
+	}
 	mp := cfg.reader.Read(kafkaOffset)
-	cfg.writer.Push(mp)
+
+	err = structData.Unmarshal(*mp)
+	if err != nil {
+		log.Output(0, err.Error())
+		panic(err)
+	}
+	converted, err := structData.Marshal()
+	if err != nil {
+		log.Output(0, err.Error())
+		panic(err)
+	}
+	cfg.writer.Push(&converted)
 }
 
 func parse() (*string, *string, *int64) {
