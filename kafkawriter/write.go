@@ -7,22 +7,18 @@ import (
 	kafka "github.com/segmentio/kafka-go"
 )
 
+var outURL, outTopic string
+
 // Push data to kafka
 func (c *Config) Push(mp *[]byte) error {
-	// fmt.Printf("%v", *mp)
 	write(c, mp)
 	return nil
 }
 
 func write(c *Config, mp *[]byte) {
-	// log.Output(0, "Incoming data :"+string(*mp))
-	// dialer := &kafka.Dialer{
-	// 	Timeout:   10 * time.Second,
-	// 	DualStack: true,
-	// }
 	w := kafka.NewWriter(kafka.WriterConfig{
-		Brokers:  []string{"159.65.4.143:9092"},
-		Topic:    "sample",
+		Brokers:  []string{outURL},
+		Topic:    outTopic,
 		Balancer: &kafka.Hash{},
 	})
 	// w := kafka.NewWriter(kafka.WriterConfig{
@@ -44,3 +40,20 @@ func write(c *Config, mp *[]byte) {
 	log.Output(0, "Info: Inserted succesfully")
 	w.Close()
 }
+func init() {
+	outURL, outTopic = "localhost:9088", "abc"
+	// parse()
+}
+
+// func parse() (*string, *string) {
+// 	f := flag.NewFlagSet("data-to-push", flag.ExitOnError)
+// 	url := f.String("out-url", os.Getenv(kafkaOutputURL), "URL to push data to")
+// 	topic := f.String("out-topic", os.Getenv(kafkaOutputTopic), "Topic to push data to")
+// 	f.Parse(os.Args[1:])
+
+// 	if f.Parsed() && (*url == "" || *topic == "") {
+// 		f.PrintDefaults()
+// 		os.Exit(1)
+// 	}
+// 	return url, topic
+// }

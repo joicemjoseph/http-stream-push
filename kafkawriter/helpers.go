@@ -6,6 +6,11 @@ type Config struct {
 	kafkaURL  *string
 }
 
+const (
+	kafkaOutputURL   = "KAFKAOUTPUTURL"
+	kafkaOutputTopic = "KAFKAOUTPUTTOPIC"
+)
+
 // Create a new instance of the same.
 func Create(topic, kafkaServerURL *string) *Config {
 

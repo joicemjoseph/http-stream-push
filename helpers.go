@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 )
 
@@ -20,24 +19,82 @@ const (
 
 var client *http.Client
 
+// Order is
+type order struct {
+	OrderID string `json:"orderId"`
+	UserID  string `json:"userId"`
+	Status  string `json:"status"`
+
+	RequestTimeStamp int64  `json:"request_timeStamp"`
+	RequestRiderID   string `json:"request_riderId"`
+
+	RequestLocationLng float64 `json:"request_location_lng"`
+	RequestLocationLat float64 `json:"request_location_lat"`
+
+	RequestWithLocationUpdate bool   `json:"request_withLocationUpdate"`
+	RequestDeviceID           string `json:"request_deviceId"`
+	TimeStamp                 int64  `json:"timeStamp"`
+}
+
+// Config is struct for reading data from given url.
+type flagData struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+	Usage string `json:"usage"`
+}
+type broaker struct {
+	reader ReadData
+	writer WriteData
+}
+type etaEvents struct {
+	DateTime     int64  `json:"dateTime"`
+	UserID       string `json:"userId"`
+	PickLocation struct {
+		Lat float64 `json:"lat"`
+		Lng float64 `json:"lng"`
+	} `json:"pickLocation"`
+	DropLocation struct {
+		Lat float64 `json:"lat"`
+		Lng float64 `json:"lng"`
+	} `json:"dropLocation,omitempty"`
+	PickCluster string `json:"pickCluster"`
+	DropCluster string `json:"dropCluster"`
+	Snooze      bool   `json:"snooze"`
+}
+type eta struct {
+	DateTime int64  `json:"dateTime"`
+	UserID   string `json:"userId"`
+
+	PickLocationLat float64 `json:"pickLocation_lat"`
+	PickLocationLng float64 `json:"pickLocation_lng"`
+
+	DropLocationLat float64 `json:"dropLocation_lat,omitempty"`
+	DropLocationLng float64 `json:"dropLocation_lng,omitempty"`
+
+	PickCluster string `json:"pickCluster"`
+	DropCluster string `json:"dropCluster"`
+	Snooze      bool   `json:"snooze"`
+}
 type orderDetailEvents struct {
 	ID string `json:"_id"`
 
-	PickupLocationLocationType []string `json:"pickupLocation_locationType"`
-	PickupLocationAddress      string   `json:"pickupLocation_address"`
-	PickupLocationLat          float64  `json:"pickupLocation_lat"`
-	PickupLocationLng          float64  `json:"pickupLocation_lng"`
-	PickupLocationCurrLat      float64  `json:"pickupLocation_currLat"`
-	PickupLocationCurrLng      float64  `json:"pickupLocation_currLng"`
-	PickupLocationSetLat       float64  `json:"pickupLocation_setLat"`
-	PickupLocationSetLng       float64  `json:"pickupLocation_setLng"`
+	// PickupLocationLocationType []string `json:"pickupLocation_locationType"`
 
-	DropLocationLocationType []string `json:"dropLocation_locationType"`
-	DropLocationAddress      string   `json:"dropLocation_address"`
-	DropLocationLat          float64  `json:"dropLocation_lat"`
-	DropLocationLng          float64  `json:"dropLocation_lng"`
-	DropLocationSetLat       float64  `json:"dropLocation_setLat"`
-	DropLocationSetLng       float64  `json:"dropLocation_setLng"`
+	PickupLocationAddress string  `json:"pickupLocation_address"`
+	PickupLocationLat     float64 `json:"pickupLocation_lat"`
+	PickupLocationLng     float64 `json:"pickupLocation_lng"`
+	PickupLocationCurrLat float64 `json:"pickupLocation_currLat"`
+	PickupLocationCurrLng float64 `json:"pickupLocation_currLng"`
+	PickupLocationSetLat  float64 `json:"pickupLocation_setLat"`
+	PickupLocationSetLng  float64 `json:"pickupLocation_setLng"`
+
+	// DropLocationLocationType []string `json:"dropLocation_locationType"`
+
+	DropLocationAddress string  `json:"dropLocation_address"`
+	DropLocationLat     float64 `json:"dropLocation_lat"`
+	DropLocationLng     float64 `json:"dropLocation_lng"`
+	DropLocationSetLat  float64 `json:"dropLocation_setLat"`
+	DropLocationSetLng  float64 `json:"dropLocation_setLng"`
 
 	CollectedCash       int `json:"collected_cash"`
 	CollectedPaytm      int `json:"collected_paytm"`
@@ -48,33 +105,59 @@ type orderDetailEvents struct {
 	CollectedFreecharge int `json:"collected_freecharge"`
 	CollectedLazypay    int `json:"collected_lazypay"`
 
-	FeedbackCustomerRated       bool          `json:"feedback_customerRated"`
-	FeedbackCustomerRateService []interface{} `json:"feedback_customerRateService"`
-	FeedbackReviewStatus        bool          `json:"feedback_reviewStatus"`
+	FeedbackCustomerRated bool `json:"feedback_customerRated"`
+	// Join strings based of array.
+	// strings.Join(customerRateService, ",")
+	FeedbackCustomerRateService string `json:"feedback_customerRateService"`
 
-	RequestID         string        `json:"requestId"`
-	UserFirstBooking  bool          `json:"userFirstBooking"`
-	FakeGps           bool          `json:"fakeGps"`
-	PaymentStatus     string        `json:"paymentStatus"`
-	OrderType         string        `json:"orderType"`
-	ClientID          string        `json:"clientId"`
-	RideTime          float64       `json:"rideTime"`
-	Discount          int           `json:"discount"`
-	SubTotal          int           `json:"subTotal"`
-	Amount            int           `json:"amount"`
-	CancelFee         int           `json:"cancelFee"`
-	PrevDue           int           `json:"prevDue"`
-	PrevDueIds        []interface{} `json:"prevDueIds"`
-	TaxPercent        int           `json:"taxPercent"`
-	TaxAmount         int           `json:"taxAmount"`
-	CashBack          int           `json:"cashBack"`
-	UserCashbackType  interface{}   `json:"userCashbackType"`
-	HailingVerified   bool          `json:"hailingVerified"`
-	Status            string        `json:"status"`
-	PickupClustersAll []string      `json:"pickupClustersAll"`
-	DropClustersAll   []string      `json:"dropClustersAll"`
-	PrevRiders        []interface{} `json:"prevRiders"`
-	PaymentType       string        `json:"paymentType"`
+	FeedbackReviewStatus bool `json:"feedback_reviewStatus"`
+
+	RequestID        string  `json:"requestId"`
+	UserFirstBooking bool    `json:"userFirstBooking"`
+	FakeGps          bool    `json:"fakeGps"`
+	PaymentStatus    string  `json:"paymentStatus"`
+	OrderType        string  `json:"orderType"`
+	ClientID         string  `json:"clientId"`
+	RideTime         float64 `json:"rideTime"`
+	Discount         int     `json:"discount"`
+	SubTotal         int     `json:"subTotal"`
+	Amount           int     `json:"amount"`
+	CancelFee        int     `json:"cancelFee"`
+	PrevDue          int     `json:"prevDue"`
+	// strings.Join(PrevDueIds, ",")
+	PrevDueIds string `json:"prevDueIds"`
+	TaxPercent int    `json:"taxPercent"`
+	TaxAmount  int    `json:"taxAmount"`
+	CashBack   int    `json:"cashBack"`
+	//if val, ok := od.UserCashbackType.(string); ok {
+	//	fod.UserCashbackType = val
+	//} else {
+	//	fod.UserCashbackType = "null"
+	//}
+
+	UserCashbackType string `json:"userCashbackType"`
+	HailingVerified  bool   `json:"hailingVerified"`
+	Status           string `json:"status"`
+	//if len(od.PickupClustersAll) <= 0 {
+	//	fod.PickupClustersAll = ""
+	//} else if len(od.PickupClustersAll) == 1 {
+	//	fod.PickupClustersAll = od.PickupClustersAll[0]
+	//} else {
+	//	fod.PickupClustersAll = strings.Join(od.PickupClustersAll, ",")
+	//}
+	PickupClustersAll string `json:"pickupClustersAll"`
+
+	//if len(od.DropClustersAll) <= 0 {
+	//	fod.DropClustersAll = ""
+	//} else if len(od.DropClustersAll) == 1 {
+	//	fod.DropClustersAll = od.DropClustersAll[0]
+	//} else {
+	//	fod.DropClustersAll = strings.Join(od.DropClustersAll, ",")
+	//}
+	DropClustersAll string `json:"dropClustersAll"`
+	//fod.PrevRiders = strings.Join(od.PrevRiders, ",")
+	PrevRiders  string `json:"prevRiders"`
+	PaymentType string `json:"paymentType"`
 
 	CustomerID        string `json:"customer__id"`
 	CustomerMobile    string `json:"customer_mobile"`
@@ -83,13 +166,14 @@ type orderDetailEvents struct {
 	CustomerGender    int    `json:"customer_gender"`
 	CustomerLastName  string `json:"customer_lastName"`
 
-	ServiceObjServiceID   string        `json:"serviceObj_serviceId"`
-	ServiceObjMinimumFare int           `json:"serviceObj_minimumFare"`
-	ServiceObjExtra       int           `json:"serviceObj_extra"`
-	ServiceObjPricePerKm  int           `json:"serviceObj_pricePerKm"`
-	ServiceObjRule        string        `json:"serviceObj_rule"`
-	ServiceObjBaseFare    int           `json:"serviceObj_baseFare"`
-	ServiceObjPriceWithKm []interface{} `json:"serviceObj_priceWithKm"`
+	ServiceObjServiceID   string `json:"serviceObj_serviceId"`
+	ServiceObjMinimumFare int    `json:"serviceObj_minimumFare"`
+	ServiceObjExtra       int    `json:"serviceObj_extra"`
+	ServiceObjPricePerKm  int    `json:"serviceObj_pricePerKm"`
+	ServiceObjRule        string `json:"serviceObj_rule"`
+	ServiceObjBaseFare    int    `json:"serviceObj_baseFare"`
+
+	//ServiceObjPriceWithKm []interface{} `json:"serviceObj_priceWithKm"`
 
 	ServiceObjPriceByKmPrice int `json:"serviceObj_priceByKm_price"`
 	ServiceObjPriceByKmKms   int `json:"serviceObj_priceByKm_kms"`
@@ -123,223 +207,11 @@ type orderDetailEvents struct {
 
 	DistanceFinalDistance float64 `json:"distance_finalDistance"`
 
-	Polyline       string `json:"polyline"`
-	CreatedDate    string `json:"createdDate"`
-	V              int    `json:"__v"`
-	OriginalQuotes []struct {
-		Amount                         int    `json:"amount"`
-		SubTotal                       int    `json:"subTotal"`
-		Discount                       int    `json:"discount"`
-		Surge                          int    `json:"surge"`
-		Tax                            int    `json:"tax"`
-		AmountBreakupBaseFareTotal     int    `json:"amountBreakup_baseFare_total"`
-		AmountBreakupBaseFareKey       string `json:"amountBreakup_baseFare_key"`
-		AmountBreakupBaseFareUnit      int    `json:"amountBreakup_baseFare_unit"`
-		AmountBreakupBaseFareQuantity  int    `json:"amountBreakup_baseFare_quantity"`
-		AmountBreakupBaseFareLevel     int    `json:"amountBreakup_baseFare_level"`
-		AmountBreakupBaseFareSign      string `json:"amountBreakup_baseFare_sign"`
-		AmountBreakupBaseFareToShow    bool   `json:"amountBreakup_baseFare_toShow"`
-		AmountBreakupBaseFareKeyToShow string `json:"amountBreakup_baseFare_keyToShow"`
+	Polyline    string `json:"polyline"`
+	CreatedDate string `json:"createdDate"`
+	V           int    `json:"__v"`
 
-		AmountBreakupPrevDueTotal     int    `json:"amountBreakup_prevDue_total"`
-		AmountBreakupPrevDueKey       string `json:"amountBreakup_prevDue_key"`
-		AmountBreakupPrevDueUnit      int    `json:"amountBreakup_prevDue_unit"`
-		AmountBreakupPrevDueQuantity  int    `json:"amountBreakup_prevDue_quantity"`
-		AmountBreakupPrevDueLevel     int    `json:"amountBreakup_prevDue_level"`
-		AmountBreakupPrevDueSign      string `json:"amountBreakup_prevDue_sign"`
-		AmountBreakupPrevDueToShow    bool   `json:"amountBreakup_prevDue_toShow"`
-		AmountBreakupPrevDueKeyToShow string `json:"amountBreakup_prevDue_keyToShow"`
-
-		AmountBreakupTollChargesTotal     int    `json:"amountBreakup_tollCharges_total"`
-		AmountBreakupTollChargesKey       string `json:"amountBreakup_tollCharges_key"`
-		AmountBreakupTollChargesUnit      int    `json:"amountBreakup_tollCharges_unit"`
-		AmountBreakupTollChargesQuantity  int    `json:"amountBreakup_tollCharges_quantity"`
-		AmountBreakupTollChargesLevel     int    `json:"amountBreakup_tollCharges_level"`
-		AmountBreakupTollChargesSign      string `json:"amountBreakup_tollCharges_sign"`
-		AmountBreakupTollChargesToShow    bool   `json:"amountBreakup_tollCharges_toShow"`
-		AmountBreakupTollChargesKeyToShow string `json:"amountBreakup_tollCharges_keyToShow"`
-
-		AmountBreakupPlatformChargesTotal     int    `json:"amountBreakup_platformCharges_total"`
-		AmountBreakupPlatformChargesKey       string `json:"amountBreakup_platformCharges_key"`
-		AmountBreakupPlatformChargesUnit      int    `json:"amountBreakup_platformCharges_unit"`
-		AmountBreakupPlatformChargesQuantity  int    `json:"amountBreakup_platformCharges_quantity"`
-		AmountBreakupPlatformChargesLevel     int    `json:"amountBreakup_platformCharges_level"`
-		AmountBreakupPlatformChargesSign      string `json:"amountBreakup_platformCharges_sign"`
-		AmountBreakupPlatformChargesToShow    bool   `json:"amountBreakup_platformCharges_toShow"`
-		AmountBreakupPlatformChargesKeyToShow string `json:"amountBreakup_platformCharges_keyToShow"`
-
-		AmountBreakupInsuranceChargesTotal     int    `json:"amountBreakup_insuranceCharges_total"`
-		AmountBreakupInsuranceChargesKey       string `json:"amountBreakup_insuranceCharges_key"`
-		AmountBreakupInsuranceChargesUnit      int    `json:"amountBreakup_insuranceCharges_unit"`
-		AmountBreakupInsuranceChargesQuantity  int    `json:"amountBreakup_insuranceCharges_quantity"`
-		AmountBreakupInsuranceChargesLevel     int    `json:"amountBreakup_insuranceCharges_level"`
-		AmountBreakupInsuranceChargesSign      string `json:"amountBreakup_insuranceCharges_sign"`
-		AmountBreakupInsuranceChargesToShow    bool   `json:"amountBreakup_insuranceCharges_toShow"`
-		AmountBreakupInsuranceChargesKeyToShow string `json:"amountBreakup_insuranceCharges_keyToShow"`
-
-		AmountBreakupMinimumFareTotal     int    `json:"amountBreakup_minimumFare_total"`
-		AmountBreakupMinimumFareKey       string `json:"amountBreakup_minimumFare_key"`
-		AmountBreakupMinimumFareUnit      int    `json:"amountBreakup_minimumFare_unit"`
-		AmountBreakupMinimumFareQuantity  int    `json:"amountBreakup_minimumFare_quantity"`
-		AmountBreakupMinimumFareLevel     int    `json:"amountBreakup_minimumFare_level"`
-		AmountBreakupMinimumFareSign      string `json:"amountBreakup_minimumFare_sign"`
-		AmountBreakupMinimumFareToShow    bool   `json:"amountBreakup_minimumFare_toShow"`
-		AmountBreakupMinimumFareKeyToShow string `json:"amountBreakup_minimumFare_keyToShow"`
-
-		AmountBreakupDistanceFareKey       string  `json:"amountBreakup_distanceFare_key"`
-		AmountBreakupDistanceFareUnit      int     `json:"amountBreakup_distanceFare_unit"`
-		AmountBreakupDistanceFareQuantity  float64 `json:"amountBreakup_distanceFare_quantity"`
-		AmountBreakupDistanceFareTotal     float64 `json:"amountBreakup_distanceFare_total"`
-		AmountBreakupDistanceFareLevel     int     `json:"amountBreakup_distanceFare_level"`
-		AmountBreakupDistanceFareSign      string  `json:"amountBreakup_distanceFare_sign"`
-		AmountBreakupDistanceFareToShow    bool    `json:"amountBreakup_distanceFare_toShow"`
-		AmountBreakupDistanceFareKeyToShow string  `json:"amountBreakup_distanceFare_keyToShow"`
-
-		AmountBreakupTimeFareKey       string  `json:"amountBreakup_timeFare_key"`
-		AmountBreakupTimeFareUnit      float64 `json:"amountBreakup_timeFare_unit"`
-		AmountBreakupTimeFareQuantity  float64 `json:"amountBreakup_timeFare_quantity"`
-		AmountBreakupTimeFareTotal     float64 `json:"amountBreakup_timeFare_total"`
-		AmountBreakupTimeFareLevel     int     `json:"amountBreakup_timeFare_level"`
-		AmountBreakupTimeFareSign      string  `json:"amountBreakup_timeFare_sign"`
-		AmountBreakupTimeFareToShow    bool    `json:"amountBreakup_timeFare_toShow"`
-		AmountBreakupTimeFareKeyToShow string  `json:"amountBreakup_timeFare_keyToShow"`
-
-		AmountBreakupSurgeKey       string `json:"amountBreakup_surge_key"`
-		AmountBreakupSurgeTotal     int    `json:"amountBreakup_surge_total"`
-		AmountBreakupSurgeLevel     int    `json:"amountBreakup_surge_level"`
-		AmountBreakupSurgeSign      string `json:"amountBreakup_surge_sign"`
-		AmountBreakupSurgeToShow    bool   `json:"amountBreakup_surge_toShow"`
-		AmountBreakupSurgeKeyToShow string `json:"amountBreakup_surge_keyToShow"`
-
-		AmountBreakupDiscountKey       string `json:"amountBreakup_discount_key"`
-		AmountBreakupDiscountTotal     int    `json:"amountBreakup_discount_total"`
-		AmountBreakupDiscountLevel     int    `json:"amountBreakup_discount_level"`
-		AmountBreakupDiscountSign      string `json:"amountBreakup_discount_sign"`
-		AmountBreakupDiscountToShow    bool   `json:"amountBreakup_discount_toShow"`
-		AmountBreakupDiscountKeyToShow string `json:"amountBreakup_discount_keyToShow"`
-
-		AmountBreakupTaxIgstPercent   int     `json:"amountBreakup_tax_igst_percent"`
-		AmountBreakupTaxIgstAppliedOn string  `json:"amountBreakup_tax_igst_appliedOn"`
-		AmountBreakupTaxIgstKey       string  `json:"amountBreakup_tax_igst_key"`
-		AmountBreakupTaxIgstTotal     float64 `json:"amountBreakup_tax_igst_total"`
-		AmountBreakupTaxIgstLevel     int     `json:"amountBreakup_tax_igst_level"`
-		AmountBreakupTaxIgstSign      string  `json:"amountBreakup_tax_igst_sign"`
-
-		AmountBreakupTaxSgstPercent   int    `json:"amountBreakup_tax_sgst_percent"`
-		AmountBreakupTaxSgstAppliedOn string `json:"amountBreakup_tax_sgst_appliedOn"`
-		AmountBreakupTaxSgstKey       string `json:"amountBreakup_tax_sgst_key"`
-		AmountBreakupTaxSgstTotal     int    `json:"amountBreakup_tax_sgst_total"`
-		AmountBreakupTaxSgstLevel     int    `json:"amountBreakup_tax_sgst_level"`
-		AmountBreakupTaxSgstSign      string `json:"amountBreakup_tax_sgst_sign"`
-
-		AmountBreakupTaxCgstPercent   int     `json:"amountBreakup_tax_cgst_percent"`
-		AmountBreakupTaxCgstAppliedOn string  `json:"amountBreakup_tax_cgst_appliedOn"`
-		AmountBreakupTaxCgstKey       string  `json:"amountBreakup_tax_cgst_key"`
-		AmountBreakupTaxCgstTotal     float64 `json:"amountBreakup_tax_cgst_total"`
-		AmountBreakupTaxCgstLevel     int     `json:"amountBreakup_tax_cgst_level"`
-		AmountBreakupTaxCgstSign      string  `json:"amountBreakup_tax_cgst_sign"`
-
-		AmountBreakupTaxTotal     int    `json:"amountBreakup_tax_total"`
-		AmountBreakupTaxKeyToShow string `json:"amountBreakup_tax_keyToShow"`
-		AmountBreakupTaxToShow    bool   `json:"amountBreakup_tax_toShow"`
-
-		AmountBreakupSubTotalKey       string `json:"amountBreakup_subTotal_key"`
-		AmountBreakupSubTotalTotal     int    `json:"amountBreakup_subTotal_total"`
-		AmountBreakupSubTotalLevel     int    `json:"amountBreakup_subTotal_level"`
-		AmountBreakupSubTotalSign      string `json:"amountBreakup_subTotal_sign"`
-		AmountBreakupSubTotalToShow    bool   `json:"amountBreakup_subTotal_toShow"`
-		AmountBreakupSubTotalKeyToShow string `json:"amountBreakup_subTotal_keyToShow"`
-
-		AmountBreakupFinalKey       string `json:"amountBreakup_final_key"`
-		AmountBreakupFinalTotal     int    `json:"amountBreakup_final_total"`
-		AmountBreakupFinalLevel     int    `json:"amountBreakup_final_level"`
-		AmountBreakupFinalToShow    bool   `json:"amountBreakup_final_toShow"`
-		AmountBreakupFinalKeyToShow string `json:"amountBreakup_final_keyToShow"`
-
-		Note             string `json:"note"`
-		PriceDescription string `json:"priceDescription"`
-		ServiceID        string `json:"serviceId"`
-
-		ServiceServiceID   string        `json:"service_serviceId"`
-		ServiceMinimumFare int           `json:"service_minimumFare"`
-		ServiceExtra       int           `json:"service_extra"`
-		ServicePricePerKm  int           `json:"service_pricePerKm"`
-		ServiceRule        string        `json:"service_rule"`
-		ServiceBaseFare    int           `json:"service_baseFare"`
-		ServicePriceWithKm []interface{} `json:"service_priceWithKm"`
-
-		ServicePriceByKmPrice int `json:"service_priceByKm_price"`
-		ServicePriceByKmKms   int `json:"service_priceByKm_kms"`
-
-		ServiceCity             string `json:"service_city"`
-		ServiceCityID           string `json:"service_cityId"`
-		ServiceCityRadius       int    `json:"service_cityRadius"`
-		ServiceCancelCharge     int    `json:"service_cancelCharge"`
-		ServiceService          string `json:"service_service"`
-		ServicePlatformCharges  int    `json:"service_platformCharges"`
-		ServiceInsuranceCharges int    `json:"service_insuranceCharges"`
-
-		ServiceTaxIgstPercent   int    `json:"service_tax_igst_percent"`
-		ServiceTaxIgstAppliedOn string `json:"service_tax_igst_appliedOn"`
-		ServiceTaxSgstPercent   int    `json:"service_tax_sgst_percent"`
-		ServiceTaxSgstAppliedOn string `json:"service_tax_sgst_appliedOn"`
-		ServiceTaxCgstPercent   int    `json:"service_tax_cgst_percent"`
-		ServiceTaxCgstAppliedOn string `json:"service_tax_cgst_appliedOn"`
-
-		ServiceParentServiceID  string  `json:"service_parentServiceId"`
-		ServicePricePerMinute   float64 `json:"service_pricePerMinute"`
-		ServiceServiceType      string  `json:"service_serviceType"`
-		ServiceCancelChargeTime int     `json:"service_cancelChargeTime"`
-		ServiceSnooze           bool    `json:"service_snooze"`
-
-		OfferApplied          bool   `json:"offerApplied,omitempty"`
-		OfferType             string `json:"offerType,omitempty"`
-		OfferID               string `json:"offerId,omitempty"`
-		OfferCode             string `json:"offerCode,omitempty"`
-		OfferText             string `json:"offerText,omitempty"`
-		OfferFailureText      string `json:"offerFailureText,omitempty"`
-		RideOfferPaymentType  string `json:"rideOfferPaymentType,omitempty"`
-		OfferName             string `json:"offerName,omitempty"`
-		PrevDue               int    `json:"prevDue"`
-		RecomendedWalletPrice int    `json:"recomendedWalletPrice"`
-		RecomendedWallet      string `json:"recomendedWallet"`
-	} `json:"originalQuotes"`
-	OldServices []interface{} `json:"oldServices"`
-	Services    []struct {
-		ServiceID   string        `json:"serviceId"`
-		MinimumFare int           `json:"minimumFare"`
-		Extra       int           `json:"extra"`
-		PricePerKm  int           `json:"pricePerKm"`
-		Rule        string        `json:"rule"`
-		BaseFare    int           `json:"baseFare"`
-		PriceWithKm []interface{} `json:"priceWithKm"`
-		PriceByKm   []struct {
-			Price int `json:"price"`
-			Kms   int `json:"kms"`
-		} `json:"priceByKm"`
-		City             string `json:"city"`
-		CityID           string `json:"cityId"`
-		CityRadius       int    `json:"cityRadius"`
-		CancelCharge     int    `json:"cancelCharge"`
-		Service          string `json:"service"`
-		PlatformCharges  int    `json:"platformCharges,omitempty"`
-		InsuranceCharges int    `json:"insuranceCharges,omitempty"`
-
-		TaxIgstPercent   int    `json:"tax_igst_percent"`
-		TaxIgstAppliedOn string `json:"tax_igst_appliedOn"`
-
-		TaxSgstPercent   int    `json:"tax_sgst_percent"`
-		TaxSgstAppliedOn string `json:"tax_sgst_appliedOn"`
-
-		TaxCgstPercent   int    `json:"tax_cgst_percent"`
-		TaxCgstAppliedOn string `json:"tax_cgst_appliedOn"`
-
-		ParentServiceID  string  `json:"parentServiceId"`
-		PricePerMinute   float64 `json:"pricePerMinute"`
-		ServiceType      string  `json:"serviceType"`
-		CancelChargeTime int     `json:"cancelChargeTime"`
-		Snooze           bool    `json:"snooze"`
-	} `json:"services"`
+	// OldServices []interface{} `json:"oldServices"`
 
 	ServiceType string `json:"serviceType"`
 
@@ -347,12 +219,13 @@ type orderDetailEvents struct {
 	CurrentLocationLat     float64 `json:"currentLocation_lat"`
 	CurrentLocationLng     float64 `json:"currentLocation_lng"`
 
-	UserType   string   `json:"userType"`
-	Type       string   `json:"type"`
-	MapRiders  []string `json:"mapRiders"`
-	BillAmount int      `json:"billAmount"`
-	TimeBucket string   `json:"timeBucket"`
-	WeekDay    int      `json:"weekDay"`
+	UserType string `json:"userType"`
+	Type     string `json:"type"`
+	// fod.MapRiders = strings.Join(od.MapRiders, ",")
+	MapRiders  string `json:"mapRiders"`
+	BillAmount int    `json:"billAmount"`
+	TimeBucket string `json:"timeBucket"`
+	WeekDay    int    `json:"weekDay"`
 
 	PickHashHash5 string `json:"pickHash_hash5"`
 	PickHashHash6 string `json:"pickHash_hash6"`
@@ -385,53 +258,16 @@ type orderDetailEvents struct {
 	CustomerObjDob           string `json:"customerObj_dob"`
 	CustomerObjFirebaseToken string `json:"customerObj_firebaseToken"`
 
-	FraudRiders []interface{} `json:"fraudRiders"`
+	// FraudRiders []interface{} `json:"fraudRiders"`
 
+	//fod.FraudDataMapRiders = strings.Join(od.FraudData.MapRiders, ",")
 	FraudDataMapRiders []string `json:"fraudData_mapRiders"`
 
 	CouponObjUsage bool `json:"couponObj_usage"`
 
-	UpdatedAt []struct {
-		ID        string `json:"_id"`
-		Status    string `json:"status"`
-		UpdatedAt int64  `json:"updatedAt"`
-		Rider     string `json:"rider"`
-	} `json:"updatedAt"`
 	CancelReasons []string `json:"cancel_reasons"`
 }
 
-// Order is
-type order struct {
-	OrderID string `json:"orderId"`
-	UserID  string `json:"userId"`
-	Status  string `json:"status"`
-
-	RequestTimeStamp int64  `json:"request_timeStamp"`
-	RequestRiderID   string `json:"request_riderId"`
-
-	RequestLocationLng float64 `json:"request_location_lng"`
-	RequestLocationLat float64 `json:"request_location_lat"`
-
-	RequestWithLocationUpdate bool   `json:"request_withLocationUpdate"`
-	RequestDeviceID           string `json:"request_deviceId"`
-	TimeStamp                 int64  `json:"timeStamp"`
-}
-
-// Config is struct for reading data from given url.
-type flagData struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
-	Usage string `json:"usage"`
-}
-type broaker struct {
-	reader ReadData
-	writer WriteData
-}
-type etaEvents struct {
-	OrderID interface{}
-	UserID  interface{}
-	Status  string
-}
 type orderEvents struct {
 	OrderID string `json:"orderId"`
 	UserID  string `json:"userId"`
@@ -520,23 +356,24 @@ func (o *orderDetailEvents) Marshal() ([]byte, error) {
 			Lazypay    int `json:"lazypay"`
 		} `json:"collected"`
 		Feedback struct {
-			CustomerRated       bool          `json:"customerRated"`
-			CustomerRateService []interface{} `json:"customerRateService"`
-			ReviewStatus        bool          `json:"reviewStatus"`
+			CustomerRated       bool     `json:"customerRated"`
+			CustomerRateService []string `json:"customerRateService"`
+			ReviewStatus        bool     `json:"reviewStatus"`
 		} `json:"feedback"`
-		RequestID         string        `json:"requestId"`
-		UserFirstBooking  bool          `json:"userFirstBooking"`
-		FakeGps           bool          `json:"fakeGps"`
-		PaymentStatus     string        `json:"paymentStatus"`
-		OrderType         string        `json:"orderType"`
-		ClientID          string        `json:"clientId"`
-		RideTime          float64       `json:"rideTime"`
-		Discount          int           `json:"discount"`
-		SubTotal          int           `json:"subTotal"`
-		Amount            int           `json:"amount"`
-		CancelFee         int           `json:"cancelFee"`
-		PrevDue           int           `json:"prevDue"`
-		PrevDueIds        []interface{} `json:"prevDueIds"`
+		RequestID        string  `json:"requestId"`
+		UserFirstBooking bool    `json:"userFirstBooking"`
+		FakeGps          bool    `json:"fakeGps"`
+		PaymentStatus    string  `json:"paymentStatus"`
+		OrderType        string  `json:"orderType"`
+		ClientID         string  `json:"clientId"`
+		RideTime         float64 `json:"rideTime"`
+		Discount         int     `json:"discount"`
+		SubTotal         int     `json:"subTotal"`
+		Amount           int     `json:"amount"`
+		CancelFee        int     `json:"cancelFee"`
+		PrevDue          int     `json:"prevDue"`
+		//strings.Join(od.PrevRiders, ",")
+		PrevDueIds        string        `json:"prevDueIds"`
 		TaxPercent        int           `json:"taxPercent"`
 		TaxAmount         int           `json:"taxAmount"`
 		CashBack          int           `json:"cashBack"`
@@ -906,10 +743,19 @@ func (o *orderDetailEvents) Marshal() ([]byte, error) {
 		} `json:"updatedAt"`
 		CancelReasons []string `json:"cancel_reasons"`
 	}
+
+	// if len(od.PickupClustersAll) <= 0 {
+	// 	fod.PickupClustersAll = ""
+	// } else if len(od.PickupClustersAll) == 1 {
+	// 	fod.PickupClustersAll = od.PickupClustersAll[0]
+	// } else {
+	// 	fod.PickupClustersAll = strings.Join(od.PickupClustersAll, ",")
+	// }
+
 	return []byte(""), nil
 }
 func (o *orderDetailEvents) Unmarshal(data []byte) error {
-	return nil
+	return json.Unmarshal(data, o)
 }
 func (o *orderEvents) Marshal() ([]byte, error) {
 
@@ -925,18 +771,29 @@ func (o *orderEvents) Marshal() ([]byte, error) {
 		RequestTimeStamp:          o.Request.TimeStamp,
 		RequestWithLocationUpdate: o.Request.WithLocationUpdate,
 	}
-	log.Printf("%+v\n\n", orderData)
 	return json.Marshal(orderData)
 }
 func (o *orderEvents) Unmarshal(data []byte) error {
 	return json.Unmarshal(data, o)
 }
-func (e etaEvents) Marshal() ([]byte, error) {
-	return []byte(""), nil
+func (e *etaEvents) Marshal() ([]byte, error) {
+	etaData := eta{
+		DateTime:        e.DateTime,
+		DropCluster:     e.DropCluster,
+		DropLocationLat: e.DropLocation.Lat,
+		DropLocationLng: e.DropLocation.Lng,
+		PickCluster:     e.PickCluster,
+		PickLocationLat: e.PickLocation.Lat,
+		PickLocationLng: e.PickLocation.Lng,
+		Snooze:          e.Snooze,
+		UserID:          e.UserID,
+	}
+	return json.Marshal(etaData)
 }
-func (e etaEvents) Unmarshal(data []byte) error {
+func (e *etaEvents) Unmarshal(data []byte) error {
 	return json.Unmarshal(data, e)
 }
+
 func getStruct(topic string) (Data, error) {
 	name := []string{"order_events", "eta", "order_detail_events", "sample"}
 	if !contains(&name, &topic) {

@@ -34,38 +34,33 @@ func main() {
 		log.Output(0, err.Error())
 		panic(err)
 	}
+	log.Print(string(converted))
 	cfg.writer.Push(&converted)
 }
 
 func parse() (*string, *string, *int64) {
 	// parse flags
-	kafkaServerURL := flag.String("url", "", "URL of the kafka server")
-	kafkaTopic := flag.String("topic", "", "name of the topic to upload the stream")
-	kafkaOffset := flag.Int64("offset", -1, "offset number")
-	flag.Parse()
+
+	offset, _ := strconv.ParseInt(os.Getenv(kafkaOffsetENV), 10, 64)
+
+	read := flag.NewFlagSet("Read data from Kafka", flag.ExitOnError)
+	kafkaServerURL := read.String("in-url", os.Getenv(kafkaServerENV), "URL of the kafka server")
+	kafkaTopic := read.String("in-topic", os.Getenv(kafkaTopicENV), "name of the topic to upload the stream")
+	kafkaOffset := read.Int64("offset", offset, "offset number")
+	read.Parse(os.Args[1:])
 
 	if *kafkaServerURL == "" {
-		if o := os.Getenv(kafkaServerENV); o != "" {
-			*kafkaServerURL = o
-		} else {
-			*kafkaServerURL = kafkaDefaultServerURL
-
-		}
+		*kafkaServerURL = kafkaDefaultServerURL
 	}
 	if *kafkaTopic == "" {
-		if o := os.Getenv(kafkaTopicENV); o != "" {
-			*kafkaServerURL = o
-		} else {
-			*kafkaTopic = kafkaDefaultTopic
-		}
+		*kafkaTopic = kafkaDefaultTopic
 	}
 	if *kafkaOffset < 0 {
-
-		if o, err := strconv.ParseInt(os.Getenv(kafkaOffsetENV), 10, 64); err == nil && o > 0 {
-			*kafkaOffset = o
-		} else {
-			*kafkaOffset = kafkaDefaultOffset
-		}
+		*kafkaOffset = kafkaDefaultOffset
+	}
+	if read.Parsed() && (*kafkaServerURL == "" || *kafkaTopic == "" || *kafkaOffset < 0) {
+		flag.PrintDefaults()
+		os.Exit(1)
 	}
 	return kafkaServerURL, kafkaTopic, kafkaOffset
 }
