@@ -7,8 +7,8 @@ import (
 	"sync"
 	"syscall"
 
-	reader "github.com/joicemjoseph/http-stream-push/kafkareader"
-	writer "github.com/joicemjoseph/http-stream-push/kafkawriter"
+	reader "./kafkareader"
+	writer "./kafkawriter"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -23,11 +23,7 @@ func main() {
 	stopReading := make(chan os.Signal, 1)
 	cfg := broaker{reader: reader.Create(kafkaReaderTopic, kafkaReaderURL),
 		writer: writer.Create(kafkaWriterTopic, kafkaWriterURL)}
-	structData, err := getStruct(*kafkaReaderTopic)
-	if err != nil {
-		log.Warn().Msgf(*kafkaReaderTopic + " is " + err.Error())
-		panic(err)
-	}
+	
 	signal.Notify(stopReading, syscall.SIGINT, syscall.SIGTERM) //syscall.SIGABRT, syscall.SIGINT
 	mp, err := cfg.reader.Read(kafkaReaderOffset, bufferSize, stopReading)
 
@@ -45,6 +41,11 @@ func main() {
 	wg.Add(xthreads)
 	for i := 0; i < xthreads; i++ {
 		go func() {
+			structData, err := getStruct(*kafkaReaderTopic)
+			if err != nil {
+				log.Warn().Msgf(*kafkaReaderTopic + " is " + err.Error())
+				panic(err)
+			}
 
 			for {
 				data, ok := <-mp

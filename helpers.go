@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	reader "github.com/joicemjoseph/http-stream-push/kafkareader"
+	reader "./kafkareader"
 )
 
 const (
