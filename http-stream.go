@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"log"
 	"os"
@@ -24,17 +25,17 @@ func main() {
 	}
 	mp := cfg.reader.Read(kafkaOffset)
 
-	err = structData.Unmarshal(*mp)
+	err = json.Unmarshal(*mp, structData)
 	if err != nil {
 		log.Output(0, err.Error())
 		panic(err)
 	}
-	converted, err := structData.Marshal()
+	converted, err := json.Marshal(structData)
 	if err != nil {
 		log.Output(0, err.Error())
 		panic(err)
 	}
-	log.Print(string(converted))
+	log.Print("Info: ", string(converted))
 	cfg.writer.Push(&converted)
 }
 

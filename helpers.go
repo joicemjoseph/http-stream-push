@@ -491,20 +491,15 @@ func contains(s *[]string, e *string) bool {
 
 // Data is
 type Data interface {
-	Marshal() ([]byte, error)
-	Unmarshal(data []byte) error
+	MarshalJSON() ([]byte, error)
 }
 
 // For Testing only
-func (o *order) Marshal() ([]byte, error) {
+func (o *order) MarshalJSON() ([]byte, error) {
 	return []byte(""), nil
 }
 
-// For Testing only
-func (o *order) Unmarshal(data []byte) error {
-	return nil
-}
-func (o *orderDetailEvents) Marshal() ([]byte, error) {
+func (o *orderDetailEvents) MarshalJSON() ([]byte, error) {
 
 	pickupClustersAll := ""
 	if len(o.PickupClustersAll) <= 0 {
@@ -653,10 +648,8 @@ func (o *orderDetailEvents) Marshal() ([]byte, error) {
 	}
 	return json.Marshal(events)
 }
-func (o *orderDetailEvents) Unmarshal(data []byte) error {
-	return json.Unmarshal(data, o)
-}
-func (o *orderEvents) Marshal() ([]byte, error) {
+
+func (o *orderEvents) MarshalJSON() ([]byte, error) {
 
 	orderData := order{
 		OrderID:                   o.OrderID,
@@ -672,10 +665,8 @@ func (o *orderEvents) Marshal() ([]byte, error) {
 	}
 	return json.Marshal(orderData)
 }
-func (o *orderEvents) Unmarshal(data []byte) error {
-	return json.Unmarshal(data, o)
-}
-func (e *etaEvents) Marshal() ([]byte, error) {
+
+func (e *etaEvents) MarshalJSON() ([]byte, error) {
 	etaData := eta{
 		DateTime:        e.DateTime,
 		DropCluster:     e.DropCluster,
@@ -689,9 +680,6 @@ func (e *etaEvents) Marshal() ([]byte, error) {
 	}
 	return json.Marshal(etaData)
 }
-func (e *etaEvents) Unmarshal(data []byte) error {
-	return json.Unmarshal(data, e)
-}
 
 func getStruct(topic string) (Data, error) {
 	name := []string{"order_events", "eta", "order_detail_events", "sample"}
@@ -699,7 +687,7 @@ func getStruct(topic string) (Data, error) {
 		return nil, errors.New("Not a valid topic")
 	}
 	if name[0] == topic {
-		return new(orderEvents), nil
+		return &orderEvents{}, nil
 	}
 	if name[1] == topic {
 		return new(etaEvents), nil
