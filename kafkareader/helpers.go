@@ -6,6 +6,13 @@ type Config struct {
 	kafkaURL  *string
 }
 
+// KafkaResult stores information from kafka.
+type KafkaResult struct {
+	Message []byte
+	Err     error
+	Counter int64
+}
+
 // Create a new instance of the same.
 func Create(topic, kafkaServerURL *string) *Config {
 

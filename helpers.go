@@ -8,12 +8,15 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	reader "github.com/joicemjoseph/http-stream-push/kafkareader"
 )
 
 const (
 	kafkaDefaultReaderURL    = "http://localhost"
 	kafkaDefaultReaderTopic  = "test"
 	kafkaDefaultReaderOffset = 0
+	kafkaDefaultBufferSize   = 1
 
 	kafkaDefaultWriterURL   = "http://localhost"
 	kafkaDefaultWriterTopic = "test2"
@@ -22,6 +25,8 @@ const (
 	kafkaReaderURLENV    = "KAFKA_READER_URL"
 	kafkaReaderTopicENV  = "KAFKA_READER_TOPIC"
 	kafkaReaderOffsetENV = "KAFKA_READER_OFFSET"
+
+	kafkaBufferSizeENV = "KAFKA_BUFFER_SIZE"
 
 	kafkaWriterURLENV   = "KAFKA_WRITER_URL"
 	kafkaWriterTopicENV = "KAFKA_WRITER_TOPIC"
@@ -479,7 +484,7 @@ type orderDetailEvents struct {
 type ReadData interface {
 
 	// read stream data
-	Read(*int64) (*[]byte, error)
+	Read(*int64, *int, chan os.Signal) (chan reader.KafkaResult, error)
 }
 
 // WriteData to write data.
@@ -717,24 +722,18 @@ func getURL(url *string) (string, error) {
 	}
 	return resp.Status, err
 }
-func parse() (*string, *string, *int64, *string, *string) {
+func parse() (*string, *string, *int64, *string, *string, *int) {
 	// parse flags
 
 	offset, _ := strconv.ParseInt(os.Getenv(kafkaReaderOffsetENV), 10, 64)
-
+	b, _ := strconv.Atoi(os.Getenv(kafkaBufferSizeENV))
 	kafkaReaderURL := flag.String("in-url", os.Getenv(kafkaReaderURLENV), "URL of the kafka server to read data from")
 	kafkaReaderTopic := flag.String("in-topic", os.Getenv(kafkaReaderTopicENV), "name of the topic to read the stream")
 	kafkaOffset := flag.Int64("offset", offset, "offset number")
 	KafkaWriterURL := flag.String("out-url", os.Getenv(kafkaWriterURLENV), "URL of kafka server to write data to")
 	kafkaWriterTopic := flag.String("out-topic", os.Getenv(kafkaWriterTopicENV), "Name of topic to write the stream")
+	kafkaBufferSize := flag.Int("buffer-size", b, "Buffer size for reading")
 	flag.Parse()
-
-	// kafkaWriter
-	// write := flag.NewFlagSet("Write data to kafka", flag.ExitOnError)
-	// KafkaWriterURL := write.String("out-url", os.Getenv(kafkaWriterURLENV), "URL of kafka server to write data to")
-	// kafkaWriterTopic := write.String("out-topic", os.Getenv(kafkaWriterTopicENV), "Name of topic to write the stream")
-
-	// write.Parse(os.Args[4:])
 
 	if *kafkaReaderURL == "" {
 		*kafkaReaderURL = kafkaDefaultReaderURL
@@ -745,7 +744,10 @@ func parse() (*string, *string, *int64, *string, *string) {
 	if *kafkaOffset < 0 {
 		*kafkaOffset = kafkaDefaultReaderOffset
 	}
-	if flag.Parsed() && (*kafkaReaderURL == "" || *kafkaReaderTopic == "" || *kafkaOffset < 0 || *KafkaWriterURL == "" || *kafkaWriterTopic == "") {
+	if *kafkaBufferSize <= 0 {
+		*kafkaBufferSize = kafkaDefaultBufferSize
+	}
+	if flag.Parsed() && (*kafkaReaderURL == "" || *kafkaReaderTopic == "" || *kafkaOffset < 0 || *KafkaWriterURL == "" || *kafkaWriterTopic == "" || *kafkaBufferSize < 0) {
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
@@ -759,5 +761,5 @@ func parse() (*string, *string, *int64, *string, *string) {
 	// 	write.PrintDefaults()
 	// 	os.Exit(1)
 	// }
-	return kafkaReaderURL, kafkaReaderTopic, kafkaOffset, kafkaWriterTopic, KafkaWriterURL
+	return kafkaReaderURL, kafkaReaderTopic, kafkaOffset, kafkaWriterTopic, KafkaWriterURL, kafkaBufferSize
 }

@@ -18,12 +18,6 @@ func write(c *Config, mp *[]byte) error {
 		Topic:    *c.topicName,
 		Balancer: &kafka.Hash{},
 	})
-	// w := kafka.NewWriter(kafka.WriterConfig{
-	// 	Brokers:  []string{"35.229.100.101:9092"},
-	// 	Topic:    "sample",
-	// 	Balancer: &kafka.Hash{},
-	// 	Dialer:   dialer,
-	// })
 
 	err := w.WriteMessages(context.Background(),
 		kafka.Message{
