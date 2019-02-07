@@ -2,17 +2,16 @@ package kafkareader
 
 import (
 	"context"
-	"log"
 
 	kafka "github.com/segmentio/kafka-go"
 	_ "github.com/segmentio/kafka-go/gzip" // ETA is gzipped.
 )
 
 // Read data from kafka
-func (c *Config) Read(offset *int64) *[]byte {
+func (c *Config) Read(offset *int64) (*[]byte, error) {
 	return reader(c, offset)
 }
-func reader(c *Config, offset *int64) *[]byte {
+func reader(c *Config, offset *int64) (*[]byte, error) {
 
 	r := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:   []string{*c.kafkaURL},
@@ -26,10 +25,10 @@ func reader(c *Config, offset *int64) *[]byte {
 	// for {
 	m, err := r.ReadMessage(context.Background())
 	if err != nil {
-		log.Output(0, "Error: "+err.Error())
-		panic(err)
+		return nil, err
+
 	}
 	// data, _ := json.Marshal(m)
 	r.Close()
-	return &m.Value
+	return &m.Value, nil
 }

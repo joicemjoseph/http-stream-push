@@ -2,18 +2,17 @@ package kafkawriter
 
 import (
 	"context"
-	"log"
 
 	kafka "github.com/segmentio/kafka-go"
 )
 
 // Push data to kafka
 func (c *Config) Push(mp *[]byte) error {
-	write(c, mp)
-	return nil
+	return write(c, mp)
+
 }
 
-func write(c *Config, mp *[]byte) {
+func write(c *Config, mp *[]byte) error {
 	w := kafka.NewWriter(kafka.WriterConfig{
 		Brokers:  []string{*c.kafkaURL},
 		Topic:    *c.topicName,
@@ -32,11 +31,10 @@ func write(c *Config, mp *[]byte) {
 		},
 	)
 	if err != nil {
-		log.Output(0, err.Error())
-		return
+		return err
 	}
-	log.Output(0, "Info: Inserted succesfully")
 	defer w.Close()
+	return nil
 }
 
 // func parse() (*string, *string) {

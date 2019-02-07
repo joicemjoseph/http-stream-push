@@ -479,7 +479,7 @@ type orderDetailEvents struct {
 type ReadData interface {
 
 	// read stream data
-	Read(*int64) *[]byte
+	Read(*int64) (*[]byte, error)
 }
 
 // WriteData to write data.
