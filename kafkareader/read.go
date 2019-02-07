@@ -42,15 +42,14 @@ func reader(c *Config, offset *int64, bufferSize *int, stopReading chan os.Signa
 		for {
 			select {
 			default:
-
 				m, err := r.ReadMessage(context.Background())
 				if err != nil {
 					log.Error().
 						Int64("counter", counter).
 						Str("error", err.Error()).
 						Msg("Error occured")
+					counter++
 					continue
-
 				}
 				log.Printf("this is :%+v", string(m.Value))
 				kr := KafkaResult{
@@ -59,6 +58,7 @@ func reader(c *Config, offset *int64, bufferSize *int, stopReading chan os.Signa
 					Counter: counter,
 				}
 				msgChan <- kr
+				counter++
 			case <-stopReading:
 				log.Info().Int64("counter", counter).
 					Msg("Ending gracefully. Last counter")
