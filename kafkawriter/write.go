@@ -7,8 +7,6 @@ import (
 	kafka "github.com/segmentio/kafka-go"
 )
 
-var outURL, outTopic string
-
 // Push data to kafka
 func (c *Config) Push(mp *[]byte) error {
 	write(c, mp)
@@ -17,8 +15,8 @@ func (c *Config) Push(mp *[]byte) error {
 
 func write(c *Config, mp *[]byte) {
 	w := kafka.NewWriter(kafka.WriterConfig{
-		Brokers:  []string{outURL},
-		Topic:    outTopic,
+		Brokers:  []string{*c.kafkaURL},
+		Topic:    *c.topicName,
 		Balancer: &kafka.Hash{},
 	})
 	// w := kafka.NewWriter(kafka.WriterConfig{
@@ -38,11 +36,7 @@ func write(c *Config, mp *[]byte) {
 		return
 	}
 	log.Output(0, "Info: Inserted succesfully")
-	w.Close()
-}
-func init() {
-	outURL, outTopic = "localhost:9088", "abc"
-	// parse()
+	defer w.Close()
 }
 
 // func parse() (*string, *string) {

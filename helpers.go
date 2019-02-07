@@ -3,19 +3,28 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"flag"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 )
 
 const (
-	kafkaDefaultServerURL = "http://localhost"
-	kafkaDefaultTopic     = "test"
-	kafkaDefaultOffset    = 0
+	kafkaDefaultReaderURL    = "http://localhost"
+	kafkaDefaultReaderTopic  = "test"
+	kafkaDefaultReaderOffset = 0
+
+	kafkaDefaultWriterURL   = "http://localhost"
+	kafkaDefaultWriterTopic = "test2"
 )
 const (
-	kafkaServerENV = "KAFKASERVERURL"
-	kafkaTopicENV  = "KAFKATOPIC"
-	kafkaOffsetENV = "KAFKAOFFSET"
+	kafkaReaderURLENV    = "KAFKA_READER_URL"
+	kafkaReaderTopicENV  = "KAFKA_READER_TOPIC"
+	kafkaReaderOffsetENV = "KAFKA_READER_OFFSET"
+
+	kafkaWriterURLENV   = "KAFKA_WRITER_URL"
+	kafkaWriterTopicENV = "KAFKA_WRITER_TOPIC"
 )
 
 var client *http.Client
@@ -707,4 +716,48 @@ func getURL(url *string) (string, error) {
 		return "", err
 	}
 	return resp.Status, err
+}
+func parse() (*string, *string, *int64, *string, *string) {
+	// parse flags
+
+	offset, _ := strconv.ParseInt(os.Getenv(kafkaReaderOffsetENV), 10, 64)
+
+	kafkaReaderURL := flag.String("in-url", os.Getenv(kafkaReaderURLENV), "URL of the kafka server to read data from")
+	kafkaReaderTopic := flag.String("in-topic", os.Getenv(kafkaReaderTopicENV), "name of the topic to read the stream")
+	kafkaOffset := flag.Int64("offset", offset, "offset number")
+	KafkaWriterURL := flag.String("out-url", os.Getenv(kafkaWriterURLENV), "URL of kafka server to write data to")
+	kafkaWriterTopic := flag.String("out-topic", os.Getenv(kafkaWriterTopicENV), "Name of topic to write the stream")
+	flag.Parse()
+
+	// kafkaWriter
+	// write := flag.NewFlagSet("Write data to kafka", flag.ExitOnError)
+	// KafkaWriterURL := write.String("out-url", os.Getenv(kafkaWriterURLENV), "URL of kafka server to write data to")
+	// kafkaWriterTopic := write.String("out-topic", os.Getenv(kafkaWriterTopicENV), "Name of topic to write the stream")
+
+	// write.Parse(os.Args[4:])
+
+	if *kafkaReaderURL == "" {
+		*kafkaReaderURL = kafkaDefaultReaderURL
+	}
+	if *kafkaReaderTopic == "" {
+		*kafkaReaderTopic = kafkaDefaultReaderTopic
+	}
+	if *kafkaOffset < 0 {
+		*kafkaOffset = kafkaDefaultReaderOffset
+	}
+	if flag.Parsed() && (*kafkaReaderURL == "" || *kafkaReaderTopic == "" || *kafkaOffset < 0 || *KafkaWriterURL == "" || *kafkaWriterTopic == "") {
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+	if *KafkaWriterURL == "" {
+		*KafkaWriterURL = kafkaDefaultWriterURL
+	}
+	if *kafkaWriterTopic == "" {
+		*kafkaWriterTopic = kafkaDefaultWriterTopic
+	}
+	// if write.Parsed() && (*KafkaWriterURL == "" || *kafkaWriterTopic == "") {
+	// 	write.PrintDefaults()
+	// 	os.Exit(1)
+	// }
+	return kafkaReaderURL, kafkaReaderTopic, kafkaOffset, kafkaWriterTopic, KafkaWriterURL
 }
