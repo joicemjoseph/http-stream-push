@@ -29,6 +29,7 @@ func reader(c *Config, offset *int64, bufferSize *int, stopReading chan os.Signa
 		MaxBytes:  1e5, // 1MB
 
 	})
+
 	r.SetOffset(*offset)
 	// m, err := r.ReadMessage(context.Background())
 	// if err != nil {
@@ -38,7 +39,7 @@ func reader(c *Config, offset *int64, bufferSize *int, stopReading chan os.Signa
 
 	go func() {
 		defer r.Close()
-		var counter int64 = 0 + *offset
+		var counter = int64(0) + *offset
 		for {
 			select {
 			default:
@@ -60,6 +61,7 @@ func reader(c *Config, offset *int64, bufferSize *int, stopReading chan os.Signa
 				msgChan <- kr
 				counter++
 			case <-stopReading:
+
 				log.Info().Int64("counter", counter).
 					Msg("Ending gracefully. Last counter")
 				close(msgChan)

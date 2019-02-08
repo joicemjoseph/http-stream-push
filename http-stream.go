@@ -7,8 +7,8 @@ import (
 	"sync"
 	"syscall"
 
-	reader "./kafkareader"
-	writer "./kafkawriter"
+	reader "github.com/joicemjoseph/http-stream-push/kafkareader"
+	writer "github.com/joicemjoseph/http-stream-push/kafkawriter"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -20,10 +20,12 @@ func init() {
 func main() {
 	kafkaReaderURL, kafkaReaderTopic, kafkaReaderOffset,
 		kafkaWriterTopic, kafkaWriterURL, bufferSize := parse()
+
 	stopReading := make(chan os.Signal, 1)
+
 	cfg := broaker{reader: reader.Create(kafkaReaderTopic, kafkaReaderURL),
 		writer: writer.Create(kafkaWriterTopic, kafkaWriterURL)}
-	
+
 	signal.Notify(stopReading, syscall.SIGINT, syscall.SIGTERM) //syscall.SIGABRT, syscall.SIGINT
 	mp, err := cfg.reader.Read(kafkaReaderOffset, bufferSize, stopReading)
 
