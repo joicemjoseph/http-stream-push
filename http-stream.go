@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"os/signal"
@@ -19,15 +20,15 @@ func init() {
 }
 func main() {
 	kafkaReaderURL, kafkaReaderTopic, kafkaReaderOffset,
-		kafkaWriterTopic, kafkaWriterURL, bufferSize := parse()
+		kafkaWriterTopic, kafkaWriterURL, bufferSize, partitionSize := parse()
 
-	stopReading := make(chan os.Signal, 1)
-
+	stopReading := make(chan os.Signal)
+	ctx, cancel := context.WithCancel(context.Background())
 	cfg := broaker{reader: reader.Create(kafkaReaderTopic, kafkaReaderURL),
 		writer: writer.Create(kafkaWriterTopic, kafkaWriterURL)}
 
 	signal.Notify(stopReading, syscall.SIGINT, syscall.SIGTERM) //syscall.SIGABRT, syscall.SIGINT
-	mp, err := cfg.reader.Read(kafkaReaderOffset, bufferSize, stopReading)
+	mp, wg2, err := cfg.reader.Read(ctx, kafkaReaderOffset, bufferSize, partitionSize)
 
 	// if ok {
 	// 	log.Info().Msgf("%+v", m.Err)
@@ -37,12 +38,18 @@ func main() {
 	if err != nil {
 		log.Warn().Msgf(err.Error())
 	}
-
+	go func() {
+		<-stopReading
+		cancel()
+		wg2.Wait()
+		close(mp)
+	}()
 	xthreads := 400
 	var wg sync.WaitGroup
 	wg.Add(xthreads)
 	for i := 0; i < xthreads; i++ {
 		go func() {
+			defer wg.Done()
 			structData, err := getStruct(*kafkaReaderTopic)
 			if err != nil {
 				log.Warn().Msgf(*kafkaReaderTopic + " is " + err.Error())
@@ -50,21 +57,26 @@ func main() {
 			}
 
 			for {
-				data, ok := <-mp
-				if !ok { // if there is nothing to do and the channel has been closed then end the goroutine
-					wg.Done()
-					return
+				select {
+				case data, ok := <-mp:
+					if !ok { // if there is nothing to do and the channel has been closed then end the goroutine
+						return
+					}
+					if data.Err != nil {
+						log.Error().Msg(err.Error())
+						continue
+					}
+					job(data, structData, cfg)
+
 				}
-				if data.Err != nil {
-					log.Error().Msg(err.Error())
-					continue
-				}
-				job(data, structData, cfg)
 			}
+
 		}()
+
 	}
 	wg.Wait()
 
+	panic("")
 }
 func job(mp reader.KafkaResult, data Data, cfg broaker) {
 	err := json.Unmarshal(mp.Message, data)

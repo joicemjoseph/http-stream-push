@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	reader "github.com/joicemjoseph/http-stream-push/kafkareader"
 )
@@ -26,7 +28,8 @@ const (
 	kafkaReaderTopicENV  = "KAFKA_READER_TOPIC"
 	kafkaReaderOffsetENV = "KAFKA_READER_OFFSET"
 
-	kafkaBufferSizeENV = "KAFKA_BUFFER_SIZE"
+	kafkaBufferSizeENV    = "KAFKA_BUFFER_SIZE"
+	kafkaPartitionSizeENV = "KAFKA_PARTITION_SIZE"
 
 	kafkaWriterURLENV   = "KAFKA_WRITER_URL"
 	kafkaWriterTopicENV = "KAFKA_WRITER_TOPIC"
@@ -484,7 +487,7 @@ type orderDetailEvents struct {
 type ReadData interface {
 
 	// read stream data
-	Read(*int64, *int, chan os.Signal) (chan reader.KafkaResult, error)
+	Read(context.Context, *int64, *int, *int) (chan reader.KafkaResult, *sync.WaitGroup, error)
 }
 
 // WriteData to write data.
@@ -722,17 +725,19 @@ func getURL(url *string) (string, error) {
 	}
 	return resp.Status, err
 }
-func parse() (*string, *string, *int64, *string, *string, *int) {
+func parse() (*string, *string, *int64, *string, *string, *int, *int) {
 	// parse flags
 
 	offset, _ := strconv.ParseInt(os.Getenv(kafkaReaderOffsetENV), 10, 64)
-	b, _ := strconv.Atoi(os.Getenv(kafkaBufferSizeENV))
+	bufferSize, _ := strconv.Atoi(os.Getenv(kafkaBufferSizeENV))
+	partitionSize, _ := strconv.Atoi(os.Getenv(kafkaPartitionSizeENV))
 	kafkaReaderURL := flag.String("in-url", os.Getenv(kafkaReaderURLENV), "URL of the kafka server to read data from")
 	kafkaReaderTopic := flag.String("in-topic", os.Getenv(kafkaReaderTopicENV), "name of the topic to read the stream")
 	kafkaOffset := flag.Int64("offset", offset, "offset number")
 	KafkaWriterURL := flag.String("out-url", os.Getenv(kafkaWriterURLENV), "URL of kafka server to write data to")
 	kafkaWriterTopic := flag.String("out-topic", os.Getenv(kafkaWriterTopicENV), "Name of topic to write the stream")
-	kafkaBufferSize := flag.Int("buffer-size", b, "Buffer size for reading")
+	kafkaBufferSize := flag.Int("buffer-size", bufferSize, "Buffer size for reading")
+	kafkaPartitionSize := flag.Int("partition-size", partitionSize, "number of partitions in-topic have")
 	flag.Parse()
 
 	if *kafkaReaderURL == "" {
@@ -761,5 +766,5 @@ func parse() (*string, *string, *int64, *string, *string, *int) {
 	// 	write.PrintDefaults()
 	// 	os.Exit(1)
 	// }
-	return kafkaReaderURL, kafkaReaderTopic, kafkaOffset, kafkaWriterTopic, KafkaWriterURL, kafkaBufferSize
+	return kafkaReaderURL, kafkaReaderTopic, kafkaOffset, kafkaWriterTopic, KafkaWriterURL, kafkaBufferSize, kafkaPartitionSize
 }
