@@ -20,7 +20,7 @@ func init() {
 }
 func main() {
 	kafkaReaderURL, kafkaReaderTopic, kafkaReaderOffset,
-		kafkaWriterTopic, kafkaWriterURL, bufferSize, partitionSize := parse()
+		kafkaWriterTopic, kafkaWriterURL, bufferSize, partitionSize, xthreads := parse()
 
 	stopReading := make(chan os.Signal)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -44,10 +44,10 @@ func main() {
 		wg2.Wait()
 		close(mp)
 	}()
-	xthreads := 4
+	// xthreads := 4
 	var wg sync.WaitGroup
-	wg.Add(xthreads)
-	for i := 0; i < xthreads; i++ {
+	wg.Add(*xthreads)
+	for i := 0; i < *xthreads; i++ {
 		go func() {
 			defer wg.Done()
 			structData, err := getStruct(*kafkaReaderTopic)
@@ -75,8 +75,6 @@ func main() {
 
 	}
 	wg.Wait()
-
-	panic("")
 }
 func job(mp reader.KafkaResult, data Data, cfg broaker) {
 	err := json.Unmarshal(mp.Message, data)

@@ -22,6 +22,8 @@ const (
 
 	kafkaDefaultWriterURL   = "http://localhost"
 	kafkaDefaultWriterTopic = "test2"
+
+	kafkaDefaultWriteXThreadSize = 4
 )
 const (
 	kafkaReaderURLENV    = "KAFKA_READER_URL"
@@ -33,6 +35,8 @@ const (
 
 	kafkaWriterURLENV   = "KAFKA_WRITER_URL"
 	kafkaWriterTopicENV = "KAFKA_WRITER_TOPIC"
+
+	writeThreadSizeENV = "WRITE_THREAD_SIZE"
 )
 
 var client *http.Client
@@ -725,12 +729,13 @@ func getURL(url *string) (string, error) {
 	}
 	return resp.Status, err
 }
-func parse() (*string, *string, *int64, *string, *string, *int, *int) {
+func parse() (*string, *string, *int64, *string, *string, *int, *int, *int) {
 	// parse flags
 
 	offset, _ := strconv.ParseInt(os.Getenv(kafkaReaderOffsetENV), 10, 64)
 	bufferSize, _ := strconv.Atoi(os.Getenv(kafkaBufferSizeENV))
 	partitionSize, _ := strconv.Atoi(os.Getenv(kafkaPartitionSizeENV))
+	threadSize, _ := strconv.Atoi(os.Getenv(writeThreadSizeENV))
 	kafkaReaderURL := flag.String("in-url", os.Getenv(kafkaReaderURLENV), "URL of the kafka server to read data from")
 	kafkaReaderTopic := flag.String("in-topic", os.Getenv(kafkaReaderTopicENV), "name of the topic to read the stream")
 	kafkaOffset := flag.Int64("offset", offset, "offset number")
@@ -738,6 +743,7 @@ func parse() (*string, *string, *int64, *string, *string, *int, *int) {
 	kafkaWriterTopic := flag.String("out-topic", os.Getenv(kafkaWriterTopicENV), "Name of topic to write the stream")
 	kafkaBufferSize := flag.Int("buffer-size", bufferSize, "Buffer size for reading")
 	kafkaPartitionSize := flag.Int("partition-size", partitionSize, "number of partitions in-topic have")
+	xthreads := flag.Int("write-threads", threadSize, "number of threads to write")
 	flag.Parse()
 
 	if *kafkaReaderURL == "" {
@@ -762,9 +768,12 @@ func parse() (*string, *string, *int64, *string, *string, *int, *int) {
 	if *kafkaWriterTopic == "" {
 		*kafkaWriterTopic = kafkaDefaultWriterTopic
 	}
+	if *xthreads <= 0 {
+		*xthreads = kafkaDefaultWriteXThreadSize
+	}
 	// if write.Parsed() && (*KafkaWriterURL == "" || *kafkaWriterTopic == "") {
 	// 	write.PrintDefaults()
 	// 	os.Exit(1)
 	// }
-	return kafkaReaderURL, kafkaReaderTopic, kafkaOffset, kafkaWriterTopic, KafkaWriterURL, kafkaBufferSize, kafkaPartitionSize
+	return kafkaReaderURL, kafkaReaderTopic, kafkaOffset, kafkaWriterTopic, KafkaWriterURL, kafkaBufferSize, kafkaPartitionSize, xthreads
 }
