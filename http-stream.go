@@ -44,7 +44,7 @@ func main() {
 		wg2.Wait()
 		close(mp)
 	}()
-	xthreads := 400
+	xthreads := 4
 	var wg sync.WaitGroup
 	wg.Add(xthreads)
 	for i := 0; i < xthreads; i++ {
@@ -90,7 +90,7 @@ func job(mp reader.KafkaResult, data Data, cfg broaker) {
 		return
 	}
 	log.Info().Str("message", string(converted)).Msg("")
-	err = cfg.writer.Push(&converted)
+	err = cfg.writer.Push(&converted, mp.Partition)
 	if err != nil {
 		log.Error().Int64("Counter", mp.Counter).Msgf(err.Error())
 		return

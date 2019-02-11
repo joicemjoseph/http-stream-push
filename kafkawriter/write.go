@@ -2,17 +2,18 @@ package kafkawriter
 
 import (
 	"context"
+	"strconv"
 
 	kafka "github.com/segmentio/kafka-go"
 )
 
 // Push data to kafka
-func (c *Config) Push(mp *[]byte) error {
-	return write(c, mp)
+func (c *Config) Push(mp *[]byte, p int) error {
+	return write(c, mp, p)
 
 }
 
-func write(c *Config, mp *[]byte) error {
+func write(c *Config, mp *[]byte, p int) error {
 	w := kafka.NewWriter(kafka.WriterConfig{
 		Brokers:  []string{*c.kafkaURL},
 		Topic:    *c.topicName,
@@ -21,6 +22,7 @@ func write(c *Config, mp *[]byte) error {
 
 	err := w.WriteMessages(context.Background(),
 		kafka.Message{
+			Key:   []byte(strconv.Itoa(p)),
 			Value: *mp,
 		},
 	)

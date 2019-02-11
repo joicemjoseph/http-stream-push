@@ -494,7 +494,7 @@ type ReadData interface {
 // It can be file, DB or kafka
 type WriteData interface {
 	// push data to
-	Push(*[]byte) error
+	Push(*[]byte, int) error
 }
 
 func contains(s *[]string, e *string) bool {
